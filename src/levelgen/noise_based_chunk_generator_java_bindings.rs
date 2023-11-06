@@ -52,6 +52,7 @@ pub extern "system" fn Java_net_minecraft_world_level_levelgen_NoiseBasedChunkGe
 #[no_mangle]
 pub extern "system" fn Java_net_minecraft_world_level_levelgen_NoiseBasedChunkGenerator_00024FluidPickerFromNoiseChunk_computeFluidAtNative(
     _env: JNIEnv,
+    _this: JObject,
     fluid_picker_ptr: jlong,
     x: jint,
     y: jint,
