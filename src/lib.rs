@@ -6,7 +6,7 @@ use jni::signature::{Primitive, ReturnType};
 use jni::sys::{jboolean, jdouble, jlong, jobject};
 use jni::JNIEnv;
 
-use levelgen::aquifer::{FluidPicker, FluidStatus};
+use levelgen::aquifer::FluidPicker;
 use levelgen::density_function::{DensityFunction, FunctionContext};
 use levelgen::density_functions::Noise;
 use levelgen::density_functions_java_bindings::create_noise_from_jobject;
@@ -50,10 +50,11 @@ pub mod core {
     pub mod block_pos;
 }
 
-// JNIEXPORT void JNICALL Java_net_minecraft_world_level_levelgen_Aquifer_00024NoiseBasedAquifer_setup
-//   (JNIEnv *, jclass);
+pub mod util {
+    pub mod mth;
+}
 
-struct NoiseBasedAquifer<BN, FP>
+pub struct NoiseBasedAquifer<BN, FP>
 where
     BN: DensityFunction,
     FP: FluidPicker,
@@ -90,30 +91,6 @@ where
             .finish()
     }
 }
-
-// NoiseBasedAquifer(NoiseChunk chunkNoiseSampler, ChunkPos chunkPos, NoiseRouter noiseRouter, PositionalRandomFactory randomSplitter, int minimumY, int height, Aquifer.FluidPicker fluidLevelSampler) {
-//     this.noiseChunk = chunkNoiseSampler;
-//     this.barrierNoise = noiseRouter.barrierNoise();
-//     this.fluidLevelFloodednessNoise = noiseRouter.fluidLevelFloodednessNoise();
-//     this.fluidLevelSpreadNoise = noiseRouter.fluidLevelSpreadNoise();
-//     this.lavaNoise = noiseRouter.lavaNoise();
-//     this.erosion = noiseRouter.erosion();
-//     this.depth = noiseRouter.depth();
-//     this.positionalRandomFactory = randomSplitter;
-//     this.minGridX = this.gridX(chunkPos.getMinBlockX()) - 1;
-//     this.globalFluidPicker = fluidLevelSampler;
-//     int i = this.gridX(chunkPos.getMaxBlockX()) + 1;
-//     this.gridSizeX = i - this.minGridX + 1;
-//     this.minGridY = this.gridY(minimumY) - 1;
-//     int j = this.gridY(minimumY + height) + 1;
-//     int k = j - this.minGridY + 1;
-//     this.minGridZ = this.gridZ(chunkPos.getMinBlockZ()) - 1;
-//     int l = this.gridZ(chunkPos.getMaxBlockZ()) + 1;
-//     this.gridSizeZ = l - this.minGridZ + 1;
-//     int m = this.gridSizeX * k * this.gridSizeZ;
-//     this.aquiferCache = new Aquifer.FluidStatus[m];
-//     this.aquiferLocationCache = new long[m];
-//     Arrays.fill(this.aquiferLocationCache, Long.MAX_VALUE);
 
 impl<BN, FP> NoiseBasedAquifer<BN, FP>
 where
@@ -152,12 +129,6 @@ where
         }
     }
 
-    // private int getIndex(int x, int y, int z) {
-    //     int i = x - this.minGridX;
-    //     int j = y - this.minGridY;
-    //     int k = z - this.minGridZ;
-    //     return (j * this.gridSizeZ + k) * this.gridSizeX + i;
-    // }
     fn get_index(&self, x: i32, y: i32, z: i32) -> i32 {
         let i: i32 = x - self.min_grid_x;
         let j: i32 = y - self.min_grid_y;
@@ -177,18 +148,6 @@ fn grid_y(y: i32) -> i32 {
 fn grid_z(z: i32) -> i32 {
     z.div_euclid(16)
 }
-
-// JNIEXPORT jlong JNICALL Java_net_minecraft_world_level_levelgen_Aquifer_00024NoiseBasedAquifer_nativeNew
-//   (JNIEnv *, jclass);
-
-// private static native long nativeNew(
-//         int minGridX,
-//         int minGridY,
-//         int minGridZ,
-//         int gridSizeX,
-//         int gridSizeZ,
-//         DensityFunction barrierNoise
-//         );
 
 #[no_mangle]
 pub extern "system" fn Java_net_minecraft_world_level_levelgen_Aquifer_00024NoiseBasedAquifer_nativeNew<
@@ -245,9 +204,6 @@ pub extern "system" fn Java_net_minecraft_world_level_levelgen_Aquifer_00024Nois
     ))) as jlong
 }
 
-// JNIEXPORT void JNICALL Java_net_minecraft_world_level_levelgen_Aquifer_00024NoiseBasedAquifer_nativeDelete
-//   (JNIEnv *, jclass, jlong);
-
 /// assumes that BN is a Noise
 #[no_mangle]
 pub extern "system" fn Java_net_minecraft_world_level_levelgen_Aquifer_00024NoiseBasedAquifer_nativeDelete(
@@ -261,9 +217,6 @@ pub extern "system" fn Java_net_minecraft_world_level_levelgen_Aquifer_00024Nois
         ));
     }
 }
-
-// JNIEXPORT jboolean JNICALL Java_net_minecraft_world_level_levelgen_Aquifer_00024NoiseBasedAquifer_shouldScheduleFluidUpdateNative
-//   (JNIEnv *, jlong);
 
 /// assumes that BN is a Noise
 #[no_mangle]
@@ -282,10 +235,7 @@ static FLUID_STATUS_AT_METHOD_ID: OnceCell<JMethodID> = OnceCell::new();
 static BLOCK_STATE_IS_METHOD_ID: OnceCell<JMethodID> = OnceCell::new();
 static BLOCK_DEFAULT_BLOCK_STATE_METHOD_ID: OnceCell<JMethodID> = OnceCell::new();
 static GET_AQUIFER_STATUS_METHOD_ID: OnceCell<JMethodID> = OnceCell::new();
-// static GLOBAL_FLUID_PICKER_FIELD_ID: OnceCell<JFieldID> = OnceCell::new();
-// static FLUID_PICKER_COMPUTE_FLUID_METHOD_ID: OnceCell<JMethodID> = OnceCell::new();
 static BLOCK_STATE_FLUID_LEVEL_FIELD_ID: OnceCell<JFieldID> = OnceCell::new();
-// static FUNCTION_CONTEXT_COMPUTE_METHOD_ID: OnceCell<JMethodID> = OnceCell::new();
 
 #[no_mangle]
 pub extern "system" fn Java_net_minecraft_world_level_levelgen_Aquifer_00024NoiseBasedAquifer_setup(
@@ -367,24 +317,6 @@ pub extern "system" fn Java_net_minecraft_world_level_levelgen_Aquifer_00024Nois
         )
         .unwrap();
     GET_AQUIFER_STATUS_METHOD_ID.set(method_id).unwrap();
-    // let field_id = env
-    //     .get_field_id(
-    //         "net/minecraft/world/level/levelgen/Aquifer$NoiseBasedAquifer",
-    //         "globalFluidPicker",
-    //         "Lnet/minecraft/world/level/levelgen/Aquifer$FluidPicker;",
-    //     )
-    //     .unwrap();
-    // GLOBAL_FLUID_PICKER_FIELD_ID
-    //     .set(field_id)
-    //     .unwrap_or_else(|_| panic!("GLOBAL_FLUID_PICKER_FIELD_ID.set(field_id) failed"));
-    // let method_id = env
-    //     .get_method_id(
-    //         "net/minecraft/world/level/levelgen/Aquifer$FluidPicker",
-    //         "computeFluid",
-    //         "(III)Lnet/minecraft/world/level/levelgen/Aquifer$FluidStatus;",
-    //     )
-    //     .unwrap();
-    // FLUID_PICKER_COMPUTE_FLUID_METHOD_ID.set(method_id).unwrap();
     let field_id = env
         .get_field_id(
             "net/minecraft/world/level/levelgen/Aquifer$FluidStatus",
@@ -395,18 +327,7 @@ pub extern "system" fn Java_net_minecraft_world_level_levelgen_Aquifer_00024Nois
     BLOCK_STATE_FLUID_LEVEL_FIELD_ID
         .set(field_id)
         .unwrap_or_else(|_| panic!("BLOCK_STATE_FLUID_LEVEL_FIELD_ID.set(field_id) failed"));
-    // let method_id = env
-    //     .get_method_id(
-    //         "net/minecraft/world/level/levelgen/DensityFunction",
-    //         "compute",
-    //         "(Lnet/minecraft/world/level/levelgen/DensityFunction$FunctionContext;)D",
-    //     )
-    //     .unwrap();
-    // FUNCTION_CONTEXT_COMPUTE_METHOD_ID.set(method_id).unwrap();
 }
-
-// JNIEXPORT jobject JNICALL Java_net_minecraft_world_level_levelgen_Aquifer_00024NoiseBasedAquifer_computeSubstance
-//   (JNIEnv *, jobject, jobject, jdouble);
 
 /// assumes that BN is a Noise
 /// assumes that FP is a FluidPickerFromNoiseChunk
@@ -414,30 +335,43 @@ pub extern "system" fn Java_net_minecraft_world_level_levelgen_Aquifer_00024Nois
 pub extern "system" fn Java_net_minecraft_world_level_levelgen_Aquifer_00024NoiseBasedAquifer_computeSubstanceNative<
     'local,
 >(
-    mut env: JNIEnv<'local>,
+    env: JNIEnv<'local>,
     jthis: JObject<'local>,
     pos_ptr: jlong,
     density: jdouble,
     this_ptr: jlong,
-    // this_noise_chunk_ptr: jlong,
+    this_noise_chunk_ptr: jlong,
 ) -> jobject {
     // println!("NoiseBasedAquifer::computeSubstanceNative");
     let this =
         unsafe { &mut *(this_ptr as *mut NoiseBasedAquifer<Noise, FluidPickerFromNoiseChunk>) };
     let pos = unsafe { &**(pos_ptr as *mut *mut dyn FunctionContext) };
-    //let this_noise_chunk = unsafe { &*(this_noise_chunk_ptr as *mut NoiseChunk) }; // TODO
-    // let i: i32 = env.call_method(&pos, "blockX", "()I", &[]).unwrap().i().unwrap();
-    // let j: i32 = env.call_method(&pos, "blockY", "()I", &[]).unwrap().i().unwrap();
-    // let k: i32 = env.call_method(&pos, "blockZ", "()I", &[]).unwrap().i().unwrap();
+    let this_noise_chunk = unsafe { &*(this_noise_chunk_ptr as *mut NoiseChunk) };
+
+    compute_substance(this, jthis, this_noise_chunk, env, pos, density)
+        .unwrap_or(std::ptr::null_mut())
+}
+
+pub fn compute_substance<BN, FP>(
+    this: &mut NoiseBasedAquifer<BN, FP>,
+    jthis: JObject,
+    _this_noise_chunk: &NoiseChunk,
+    mut env: JNIEnv,
+    pos: &(impl FunctionContext + ?Sized),
+    density: f64,
+) -> Result<jobject, jni::errors::Error>
+where
+    BN: DensityFunction,
+    FP: FluidPicker,
+{
     let i: i32 = pos.block_x();
     let j: i32 = pos.block_y();
     let k: i32 = pos.block_z();
 
     if density > 0.0 {
         this.should_schedule_fluid_update = false;
-        std::ptr::null_mut()
+        Ok(std::ptr::null_mut())
     } else {
-        // let fluid_status = env.call_method(&jthis, "computeFluid", "(III)Lnet/minecraft/world/level/levelgen/Aquifer$FluidStatus;", &[i.into(), j.into(), k.into()]).unwrap().l().unwrap();
         let fluid_status = unsafe {
             env.call_method_unchecked(
                 &jthis,
@@ -451,40 +385,18 @@ pub extern "system" fn Java_net_minecraft_world_level_levelgen_Aquifer_00024Nois
             )
         };
         if fluid_status.is_err() {
-            return std::ptr::null_mut();
+            return Ok(std::ptr::null_mut());
         }
-        let fluid_status = fluid_status.unwrap().l().unwrap();
-        // let tmp3 = env
-        //     .call_method(
-        //         fluid_status,
-        //         "at",
-        //         "(I)Lnet/minecraft/world/level/block/state/BlockState;",
-        //         &[j.into()],
-        //     )
-        //     .unwrap()
-        //     .l()
-        //     .unwrap();
+        let fluid_status = fluid_status?.l()?;
         let tmp3 = unsafe {
             env.call_method_unchecked(
                 &fluid_status,
                 FLUID_STATUS_AT_METHOD_ID.get().unwrap(),
                 ReturnType::Object,
                 &[JValue::from(j).as_jni()],
-            )
-            .unwrap()
-            .l()
-            .unwrap()
+            )?
+            .l()?
         };
-        // if env
-        //     .call_method(
-        //         &tmp3,
-        //         "is",
-        //         "(Lnet/minecraft/world/level/block/Block;)Z",
-        //         &[BLOCK_LAVA.get().unwrap().into()],
-        //     )
-        //     .unwrap()
-        //     .z()
-        //     .unwrap()
         if unsafe {
             env.call_method_unchecked(
                 &tmp3,
@@ -492,34 +404,20 @@ pub extern "system" fn Java_net_minecraft_world_level_levelgen_Aquifer_00024Nois
                 ReturnType::Primitive(Primitive::Boolean),
                 // &[BLOCK_LAVA.get().unwrap().into()],
                 &[JValue::from(BLOCK_LAVA.get().unwrap().as_obj()).as_jni()],
-            )
-            .unwrap()
-            .z()
-            .unwrap()
+            )?
+            .z()?
         } {
             this.should_schedule_fluid_update = false;
-            // return env
-            //     .call_method(
-            //         BLOCK_LAVA.get().unwrap().as_obj(),
-            //         "defaultBlockState",
-            //         "()Lnet/minecraft/world/level/block/state/BlockState;",
-            //         &[],
-            //     )
-            //     .unwrap()
-            //     .l()
-            //     .unwrap()
-            //     .as_raw();
             return unsafe {
-                env.call_method_unchecked(
-                    BLOCK_LAVA.get().unwrap().as_obj(),
-                    BLOCK_DEFAULT_BLOCK_STATE_METHOD_ID.get().unwrap(),
-                    ReturnType::Object,
-                    &[],
-                )
-                .unwrap()
-                .l()
-                .unwrap()
-                .as_raw()
+                Ok(env
+                    .call_method_unchecked(
+                        BLOCK_LAVA.get().unwrap().as_obj(),
+                        BLOCK_DEFAULT_BLOCK_STATE_METHOD_ID.get().unwrap(),
+                        ReturnType::Object,
+                        &[],
+                    )?
+                    .l()?
+                    .as_raw())
             };
         } else {
             let l: i32 = grid_x(i - 5);
@@ -577,191 +475,64 @@ pub extern "system" fn Java_net_minecraft_world_level_levelgen_Aquifer_00024Nois
                 }
             }
 
-            // let fluid_status2 = env
-            //     .call_method(
-            //         &jthis,
-            //         "getAquiferStatus",
-            //         "(J)Lnet/minecraft/world/level/levelgen/Aquifer$FluidStatus;",
-            //         &[r.into()],
-            //     )
-            //     .unwrap()
-            //     .l()
-            //     .unwrap();
             let fluid_status2 = unsafe {
                 env.call_method_unchecked(
                     &jthis,
                     GET_AQUIFER_STATUS_METHOD_ID.get().unwrap(),
                     ReturnType::Object,
                     &[JValue::from(r).as_jni()],
-                )
-                .unwrap()
-                .l()
-                .unwrap()
+                )?
+                .l()?
             };
             let d: f64 = similarity(o, p);
-            // let block_state = env
-            //     .call_method(
-            //         &fluid_status2,
-            //         "at",
-            //         "(I)Lnet/minecraft/world/level/block/state/BlockState;",
-            //         &[j.into()],
-            //     )
-            //     .unwrap()
-            //     .l()
-            //     .unwrap();
             let block_state = unsafe {
                 env.call_method_unchecked(
                     &fluid_status2,
                     FLUID_STATUS_AT_METHOD_ID.get().unwrap(),
                     ReturnType::Object,
                     &[JValue::from(j).as_jni()],
-                )
-                .unwrap()
-                .l()
-                .unwrap()
+                )?
+                .l()?
             };
             let res = {
-                // let tmp3 = env
-                //     .get_field(
-                //         &jthis,
-                //         "globalFluidPicker",
-                //         "Lnet/minecraft/world/level/levelgen/Aquifer$FluidPicker;",
-                //     )
-                //     .unwrap()
-                //     .l()
-                //     .unwrap();
-
-                // let tmp3 = env
-                //     .get_field_unchecked(
-                //         &jthis,
-                //         GLOBAL_FLUID_PICKER_FIELD_ID.get().unwrap(),
-                //         ReturnType::Object,
-                //     )
-                //     .unwrap()
-                //     .l()
-                //     .unwrap();
-
-                // let tmp4 = env
-                //     .call_method(
-                //         tmp3,
-                //         "computeFluid",
-                //         "(III)Lnet/minecraft/world/level/levelgen/Aquifer$FluidStatus;",
-                //         &[i.into(), (j - 1).into(), k.into()],
-                //     )
-                //     .unwrap()
-                //     .l()
-                //     .unwrap();
-
-                // let tmp4 = unsafe {
-                //     env.call_method_unchecked(
-                //         tmp3,
-                //         FLUID_PICKER_COMPUTE_FLUID_METHOD_ID.get().unwrap(),
-                //         ReturnType::Object,
-                //         &[
-                //             JValue::from(i).as_jni(),
-                //             JValue::from(j - 1).as_jni(),
-                //             JValue::from(k).as_jni(),
-                //         ],
-                //     )
-                //     .unwrap()
-                //     .l()
-                //     .unwrap()
-                // };
                 let tmp4 = this.global_fluid_picker.compute_fluid(i, j - 1, k);
 
-                // let tmp5 = env
-                //     .call_method(
-                //         tmp4,
-                //         "at",
-                //         "(I)Lnet/minecraft/world/level/block/state/BlockState;",
-                //         &[(j - 1).into()],
-                //     )
-                //     .unwrap()
-                //     .l()
-                //     .unwrap();
-
-                // let tmp5 = unsafe {
-                //     env.call_method_unchecked(
-                //         tmp4,
-                //         FLUID_STATUS_AT_METHOD_ID.get().unwrap(),
-                //         ReturnType::Object,
-                //         &[JValue::from(j - 1).as_jni()],
-                //     )
-                //     .unwrap()
-                //     .l()
-                //     .unwrap()
-                // };
                 let tmp5 = tmp4.at(j - 1);
 
-                // env.call_method(
-                //     &block_state,
-                //     "is",
-                //     "(Lnet/minecraft/world/level/block/Block;)Z",
-                //     &[BLOCK_WATER.get().unwrap().into()],
-                // )
-                // .unwrap()
-                // .z()
-                // .unwrap()
-                //     && env
-                //         .call_method(
-                //             tmp5,
-                //             "is",
-                //             "(Lnet/minecraft/world/level/block/Block;)Z",
-                //             &[BLOCK_LAVA.get().unwrap().into()],
-                //         )
-                //         .unwrap()
-                //         .z()
-                //         .unwrap()
                 unsafe {
                     env.call_method_unchecked(
                         &block_state,
                         BLOCK_STATE_IS_METHOD_ID.get().unwrap(),
                         ReturnType::Primitive(Primitive::Boolean),
                         &[JValue::from(BLOCK_WATER.get().unwrap().as_obj()).as_jni()],
-                    )
-                    .unwrap()
-                    .z()
-                    .unwrap()
+                    )?
+                    .z()?
                         && env
                             .call_method_unchecked(
                                 tmp5,
                                 BLOCK_STATE_IS_METHOD_ID.get().unwrap(),
                                 ReturnType::Primitive(Primitive::Boolean),
                                 &[JValue::from(BLOCK_LAVA.get().unwrap().as_obj()).as_jni()],
-                            )
-                            .unwrap()
-                            .z()
-                            .unwrap()
+                            )?
+                            .z()?
                 }
             };
             if d <= 0.0 {
                 this.should_schedule_fluid_update = d >= similarity(100, 144);
-                block_state.as_raw()
+                Ok(block_state.as_raw())
             } else if res {
                 this.should_schedule_fluid_update = true;
-                return block_state.as_raw();
+                return Ok(block_state.as_raw());
             } else {
                 let mut mutable_double: f64 = std::f64::NAN;
-                // let fluid_status3 = env
-                //     .call_method(
-                //         &jthis,
-                //         "getAquiferStatus",
-                //         "(J)Lnet/minecraft/world/level/levelgen/Aquifer$FluidStatus;",
-                //         &[s.into()],
-                //     )
-                //     .unwrap()
-                //     .l()
-                //     .unwrap();
                 let fluid_status3 = unsafe {
                     env.call_method_unchecked(
                         &jthis,
                         GET_AQUIFER_STATUS_METHOD_ID.get().unwrap(),
                         ReturnType::Object,
                         &[JValue::from(s).as_jni()],
-                    )
-                    .unwrap()
-                    .l()
-                    .unwrap()
+                    )?
+                    .l()?
                 };
                 let e: f64 = d * calculate_pressure(
                     &mut env,
@@ -770,31 +541,19 @@ pub extern "system" fn Java_net_minecraft_world_level_levelgen_Aquifer_00024Nois
                     &mut mutable_double,
                     &fluid_status2,
                     &fluid_status3,
-                );
+                )?;
                 if density + e > 0.0 {
                     this.should_schedule_fluid_update = false;
-                    return std::ptr::null_mut();
+                    return Ok(std::ptr::null_mut());
                 } else {
-                    // let fluid_status4 = env
-                    //     .call_method(
-                    //         &jthis,
-                    //         "getAquiferStatus",
-                    //         "(J)Lnet/minecraft/world/level/levelgen/Aquifer$FluidStatus;",
-                    //         &[t.into()],
-                    //     )
-                    //     .unwrap()
-                    //     .l()
-                    //     .unwrap();
                     let fluid_status4 = unsafe {
                         env.call_method_unchecked(
                             &jthis,
                             GET_AQUIFER_STATUS_METHOD_ID.get().unwrap(),
                             ReturnType::Object,
                             &[JValue::from(t).as_jni()],
-                        )
-                        .unwrap()
-                        .l()
-                        .unwrap()
+                        )?
+                        .l()?
                     };
                     let f: f64 = similarity(o, q);
                     if f > 0.0 {
@@ -807,10 +566,10 @@ pub extern "system" fn Java_net_minecraft_world_level_levelgen_Aquifer_00024Nois
                                 &mut mutable_double,
                                 &fluid_status2,
                                 &fluid_status4,
-                            );
+                            )?;
                         if density + g > 0.0 {
                             this.should_schedule_fluid_update = false;
-                            return std::ptr::null_mut();
+                            return Ok(std::ptr::null_mut());
                         }
                     }
 
@@ -825,15 +584,15 @@ pub extern "system" fn Java_net_minecraft_world_level_levelgen_Aquifer_00024Nois
                                 &mut mutable_double,
                                 &fluid_status3,
                                 &fluid_status4,
-                            );
+                            )?;
                         if density + ai > 0.0 {
                             this.should_schedule_fluid_update = false;
-                            return std::ptr::null_mut();
+                            return Ok(std::ptr::null_mut());
                         }
                     }
 
                     this.should_schedule_fluid_update = false;
-                    return block_state.as_raw();
+                    return Ok(block_state.as_raw());
                 }
             }
         }
@@ -847,172 +606,84 @@ fn similarity(i: i32, a: i32) -> f64 {
 fn calculate_pressure<BN, FP>(
     env: &mut JNIEnv,
     this: &NoiseBasedAquifer<BN, FP>,
-    pos: &dyn FunctionContext,
+    pos: &(impl FunctionContext + ?Sized),
     mutable_double: &mut f64,
     fluid_status: &JObject,
     fluid_status2: &JObject,
-) -> f64
+) -> Result<f64, jni::errors::Error>
 where
     BN: DensityFunction,
     FP: FluidPicker,
 {
-    // let i: i32 = env.call_method(pos, "blockY", "()I", &[]).unwrap().i().unwrap();
-    // println!("NoiseBasedAquifer::calculate_pressure");
     let i: i32 = pos.block_y();
-    // let block_state: JObject = env
-    //     .call_method(
-    //         fluid_status,
-    //         "at",
-    //         "(I)Lnet/minecraft/world/level/block/state/BlockState;",
-    //         &[i.into()],
-    //     )
-    //     .unwrap()
-    //     .l()
-    //     .unwrap();
     let block_state: JObject = unsafe {
         env.call_method_unchecked(
             fluid_status,
             FLUID_STATUS_AT_METHOD_ID.get().unwrap(),
             ReturnType::Object,
             &[JValue::from(i).as_jni()],
-        )
-        .unwrap()
-        .l()
-        .unwrap()
+        )?
+        .l()?
     };
-    // let block_state2: JObject = env
-    //     .call_method(
-    //         fluid_status2,
-    //         "at",
-    //         "(I)Lnet/minecraft/world/level/block/state/BlockState;",
-    //         &[i.into()],
-    //     )
-    //     .unwrap()
-    //     .l()
-    //     .unwrap();
     let block_state2: JObject = unsafe {
         env.call_method_unchecked(
             fluid_status2,
             FLUID_STATUS_AT_METHOD_ID.get().unwrap(),
             ReturnType::Object,
             &[JValue::from(i).as_jni()],
-        )
-        .unwrap()
-        .l()
-        .unwrap()
+        )?
+        .l()?
     };
-    // if (!env
-    //     .call_method(
-    //         &block_state,
-    //         "is",
-    //         "(Lnet/minecraft/world/level/block/Block;)Z",
-    //         &[BLOCK_LAVA.get().unwrap().into()],
-    //     )
-    //     .unwrap()
-    //     .z()
-    //     .unwrap()
-    //     || !env
-    //         .call_method(
-    //             &block_state2,
-    //             "is",
-    //             "(Lnet/minecraft/world/level/block/Block;)Z",
-    //             &[BLOCK_WATER.get().unwrap().into()],
-    //         )
-    //         .unwrap()
-    //         .z()
-    //         .unwrap())
-    //     && (!env
-    //         .call_method(
-    //             &block_state,
-    //             "is",
-    //             "(Lnet/minecraft/world/level/block/Block;)Z",
-    //             &[BLOCK_WATER.get().unwrap().into()],
-    //         )
-    //         .unwrap()
-    //         .z()
-    //         .unwrap()
-    //         || !env
-    //             .call_method(
-    //                 &block_state2,
-    //                 "is",
-    //                 "(Lnet/minecraft/world/level/block/Block;)Z",
-    //                 &[BLOCK_LAVA.get().unwrap().into()],
-    //             )
-    //             .unwrap()
-    //             .z()
-    //             .unwrap())
     if unsafe {
         !env.call_method_unchecked(
             &block_state,
             BLOCK_STATE_IS_METHOD_ID.get().unwrap(),
             ReturnType::Primitive(Primitive::Boolean),
             &[JValue::from(BLOCK_LAVA.get().unwrap().as_obj()).as_jni()],
-        )
-        .unwrap()
-        .z()
-        .unwrap()
+        )?
+        .z()?
             || !env
                 .call_method_unchecked(
                     &block_state2,
                     BLOCK_STATE_IS_METHOD_ID.get().unwrap(),
                     ReturnType::Primitive(Primitive::Boolean),
                     &[JValue::from(BLOCK_WATER.get().unwrap().as_obj()).as_jni()],
-                )
-                .unwrap()
-                .z()
-                .unwrap()
+                )?
+                .z()?
     } && unsafe {
         !env.call_method_unchecked(
             &block_state,
             BLOCK_STATE_IS_METHOD_ID.get().unwrap(),
             ReturnType::Primitive(Primitive::Boolean),
             &[JValue::from(BLOCK_WATER.get().unwrap().as_obj()).as_jni()],
-        )
-        .unwrap()
-        .z()
-        .unwrap()
+        )?
+        .z()?
             || !env
                 .call_method_unchecked(
                     &block_state2,
                     BLOCK_STATE_IS_METHOD_ID.get().unwrap(),
                     ReturnType::Primitive(Primitive::Boolean),
                     &[JValue::from(BLOCK_LAVA.get().unwrap().as_obj()).as_jni()],
-                )
-                .unwrap()
-                .z()
-                .unwrap()
+                )?
+                .z()?
     } {
-        // let fluid_level: i32 = env
-        //     .get_field(fluid_status, "fluidLevel", "I")
-        //     .unwrap()
-        //     .i()
-        //     .unwrap();
         let fluid_level: i32 = env
             .get_field_unchecked(
                 fluid_status,
                 BLOCK_STATE_FLUID_LEVEL_FIELD_ID.get().unwrap(),
                 ReturnType::Primitive(Primitive::Int),
-            )
-            .unwrap()
-            .i()
-            .unwrap();
-        // let fluid_level2: i32 = env
-        //     .get_field(fluid_status2, "fluidLevel", "I")
-        //     .unwrap()
-        //     .i()
-        //     .unwrap();
+            )?
+            .i()?;
         let fluid_level2: i32 = env
             .get_field_unchecked(
                 fluid_status2,
                 BLOCK_STATE_FLUID_LEVEL_FIELD_ID.get().unwrap(),
                 ReturnType::Primitive(Primitive::Int),
-            )
-            .unwrap()
-            .i()
-            .unwrap();
+            )?
+            .i()?;
         let j: i32 = (fluid_level - fluid_level2).abs();
         if j == 0 {
-            0.0
+            Ok(0.0)
         } else {
             let d: f64 = 0.5 * (fluid_level + fluid_level2) as f64;
             let e: f64 = i as f64 + 0.5 - d;
@@ -1046,18 +717,6 @@ where
             if (-2.0..=2.0).contains(&q) {
                 let x: f64 = *mutable_double;
                 if mutable_double.is_nan() {
-                    // *mutable_double = env.call_method(this.barrier_noise.as_obj(), "compute", "(Lnet/minecraft/world/level/levelgen/DensityFunction$FunctionContext;)D", &[JValueGen::from(jpos)]).unwrap().d().unwrap();
-                    // *mutable_double = unsafe {
-                    //     env.call_method_unchecked(
-                    //         this.barrier_noise.as_obj(),
-                    //         FUNCTION_CONTEXT_COMPUTE_METHOD_ID.get().unwrap(),
-                    //         ReturnType::Primitive(Primitive::Double),
-                    //         &[JValue::from(jpos).as_jni()],
-                    //     )
-                    //     .unwrap()
-                    //     .d()
-                    //     .unwrap()
-                    // };
                     *mutable_double = this.barrier_noise.compute(pos);
                     z = *mutable_double;
                 } else {
@@ -1067,10 +726,10 @@ where
                 z = 0.0;
             }
 
-            2.0 * (z + q)
+            Ok(2.0 * (z + q))
         }
     } else {
-        2.0
+        Ok(2.0)
     }
 }
 
