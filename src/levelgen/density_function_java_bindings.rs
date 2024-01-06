@@ -1,6 +1,6 @@
 use jni::{JNIEnv, objects::JClass, sys::{jint, jlong}};
 
-use super::density_function::{SinglePointContext, FunctionContext};
+use super::density_function::{SinglePointContext, FunctionContext, FunctionContextVariants};
 
 
 // /*
@@ -18,7 +18,7 @@ pub extern "system" fn Java_net_minecraft_world_level_levelgen_DensityFunction_0
     y: jint,
     z: jint,
 ) -> jlong {
-    Box::into_raw(Box::new(Box::new(SinglePointContext::new(x, y, z)) as Box<dyn FunctionContext>)) as jlong
+    Box::into_raw(Box::new(FunctionContextVariants::SinglePointContext(SinglePointContext::new(x, y, z)))) as jlong
 }
 // /*
 //  * Class:     net_minecraft_world_level_levelgen_DensityFunction_SinglePointContext
@@ -33,7 +33,7 @@ pub extern "system" fn Java_net_minecraft_world_level_levelgen_DensityFunction_0
     _class: JClass,
     ptr: jlong,
 ) {
-    unsafe { drop(Box::from_raw(ptr as *mut Box<dyn FunctionContext>)); }
+    unsafe { drop(Box::from_raw(ptr as *mut FunctionContextVariants)) }
 }
 // /*
 //  * Class:     net_minecraft_world_level_levelgen_DensityFunction_SinglePointContext
@@ -48,8 +48,11 @@ pub extern "system" fn Java_net_minecraft_world_level_levelgen_DensityFunction_0
     _class: JClass,
     ptr: jlong,
 ) -> jint {
-    let context = unsafe { &**(ptr as *const*const SinglePointContext) };
-    context.block_x() as jint
+    let context = unsafe { &*(ptr as *const FunctionContextVariants) };
+    match context {
+        FunctionContextVariants::SinglePointContext(context) => context.block_x() as jint,
+        _ => unreachable!(),
+    }
 }
 // /*
 //  * Class:     net_minecraft_world_level_levelgen_DensityFunction_SinglePointContext
@@ -64,8 +67,11 @@ pub extern "system" fn Java_net_minecraft_world_level_levelgen_DensityFunction_0
     _class: JClass,
     ptr: jlong,
 ) -> jint {
-    let context = unsafe { &**(ptr as *const*const SinglePointContext) };
-    context.block_y() as jint
+    let context = unsafe { &*(ptr as *const FunctionContextVariants) };
+    match context {
+        FunctionContextVariants::SinglePointContext(context) => context.block_y() as jint,
+        _ => unreachable!(),
+    }
 }
 // /*
 //  * Class:     net_minecraft_world_level_levelgen_DensityFunction_SinglePointContext
@@ -80,6 +86,9 @@ pub extern "system" fn Java_net_minecraft_world_level_levelgen_DensityFunction_0
     _class: JClass,
     ptr: jlong,
 ) -> jint {
-    let context = unsafe { &**(ptr as *const*const SinglePointContext) };
-    context.block_z() as jint
+    let context = unsafe { &*(ptr as *const FunctionContextVariants) };
+    match context {
+        FunctionContextVariants::SinglePointContext(context) => context.block_z() as jint,
+        _ => unreachable!(),
+    }
 }

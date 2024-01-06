@@ -1,10 +1,18 @@
-use std::rc::Rc;
-use super::synth::normal_noise::NormalNoise;
+use enum_dispatch::enum_dispatch;
 
+use super::{synth::normal_noise::NormalNoise, noise_chunk::NoiseChunk};
+
+#[enum_dispatch]
 pub trait FunctionContext {
     fn block_x(&self) -> i32;
     fn block_y(&self) -> i32;
     fn block_z(&self) -> i32;
+}
+
+#[enum_dispatch(FunctionContext)]
+pub enum FunctionContextVariants {
+    SinglePointContext(SinglePointContext),
+    NoiseChunk(NoiseChunk),
 }
 
 pub struct SinglePointContext {
@@ -33,10 +41,10 @@ impl FunctionContext for SinglePointContext {
     }
 }
 
-pub trait ContextProvider {
-    fn for_index(&mut self, index: i32) -> Rc<dyn FunctionContext>;
-    // fn fill_all_directly(&mut self, densities: &mut [f32], density_function: &dyn DensityFunction);
-}
+// pub trait ContextProvider {
+//     fn for_index(&mut self, index: i32) -> Rc<dyn FunctionContext>;
+//     // fn fill_all_directly(&mut self, densities: &mut [f32], density_function: &dyn DensityFunction);
+// }
 
 pub trait DensityFunction {
     fn compute<T>(&self, pos: &T) -> f64

@@ -1,6 +1,6 @@
 use jni::{sys::{jlong, jint}, JNIEnv, objects::{JClass, JObject}};
 
-use super::{noise_chunk::NoiseChunk, density_function::FunctionContext};
+use super::{noise_chunk::NoiseChunk, density_function::{FunctionContext, FunctionContextVariants}};
 
 
 // /*
@@ -30,7 +30,7 @@ pub extern "system" fn Java_net_minecraft_world_level_levelgen_NoiseChunk_native
         cell_start_block_x,
         cell_start_block_z,
     );
-    Box::into_raw(Box::new(Box::new(noise_chunk) as Box<dyn FunctionContext>)) as jlong
+    Box::into_raw(Box::new(FunctionContextVariants::NoiseChunk(noise_chunk))) as jlong
 }
 // /*
 //  * Class:     net_minecraft_world_level_levelgen_NoiseChunk
@@ -45,7 +45,7 @@ pub extern "system" fn Java_net_minecraft_world_level_levelgen_NoiseChunk_native
     _class: JClass,
     noise_chunk_ptr: jlong,
 ) {
-    unsafe { drop(Box::from_raw(noise_chunk_ptr as *mut Box<dyn FunctionContext>)); }
+    unsafe { drop(Box::from_raw(noise_chunk_ptr as *mut FunctionContextVariants)) }
 }
 // /*
 //  * Class:     net_minecraft_world_level_levelgen_NoiseChunk
@@ -295,9 +295,11 @@ pub extern "system" fn Java_net_minecraft_world_level_levelgen_NoiseChunk_native
 }
 
 fn get_noise_chunk<'a>(noise_chunk_ptr: jlong) -> &'a mut NoiseChunk {
-    let noise_chunk_dyn = unsafe { *(noise_chunk_ptr as *mut*mut dyn FunctionContext) };
-    // Note: Not sure if this is safe, but it seems to work.
-    unsafe { &mut *(noise_chunk_dyn as *mut NoiseChunk) }
+    let a = unsafe { &mut *(noise_chunk_ptr as *mut FunctionContextVariants) };
+    match a {
+        FunctionContextVariants::NoiseChunk(noise_chunk) => noise_chunk,
+        _ => unreachable!(),
+    }
 }
 
     // private static native int nativePrecomputePreliminarySurfaceLevel(long nativePtr, int blockX, int blockZ);
