@@ -219,7 +219,7 @@ pub struct PerlinNoise {
     amplitudes: Vec<f64>,
     lowest_freq_input_factor: f64,
     lowest_freq_value_factor: f64,
-    max_value: f64,
+    _max_value: f64,
 }
 
 impl PerlinNoise {
@@ -230,12 +230,12 @@ impl PerlinNoise {
             amplitudes,
             lowest_freq_input_factor,
             lowest_freq_value_factor,
-            max_value,
+            _max_value: max_value,
         }
     }
 
-    pub(super) fn max_value(&self) -> f64 {
-        self.max_value
+    pub(super) fn _max_value(&self) -> f64 {
+        self._max_value
     }
 
     pub fn get_value(&self, x: f64, y: f64, z: f64) -> f64 {

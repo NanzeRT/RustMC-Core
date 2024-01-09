@@ -1,9 +1,6 @@
-use once_cell::sync::OnceCell;
-
-use jni::objects::GlobalRef;
+use std::mem::MaybeUninit;
 
 use crate::level::state::block_state::BlockStateId;
-
 
 pub trait FluidPicker {
     fn compute_fluid(&self, x: i32, y: i32, z: i32) -> FluidStatus;
@@ -17,8 +14,8 @@ pub struct FluidStatus {
     is_type_air: bool,
 }
 
-pub(crate) static DEFAULT_AIR_STATE: OnceCell<GlobalRef> = OnceCell::new();
-pub(crate) static DEFAULT_AIR_STATE_ID: OnceCell<BlockStateId> = OnceCell::new();
+// pub(crate) static DEFAULT_AIR_STATE: OnceCell<GlobalRef> = OnceCell::new();
+pub(crate) static mut DEFAULT_AIR_STATE_ID: MaybeUninit<BlockStateId> = MaybeUninit::uninit();
 
 impl FluidStatus {
     pub fn new(fluid_level: i32, fluid_type: BlockStateId, is_type_air: bool) -> Self {
@@ -33,7 +30,7 @@ impl FluidStatus {
         if y < self.fluid_level {
             self.fluid_type
         } else {
-            *DEFAULT_AIR_STATE_ID.get().unwrap()
+            unsafe { DEFAULT_AIR_STATE_ID.assume_init() }
         }
     }
 

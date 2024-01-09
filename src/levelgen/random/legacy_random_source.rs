@@ -1,7 +1,12 @@
 use std::sync::atomic::{AtomicI64, Ordering};
 
-use super::{marsaglia_polar_gaussian::MarsagliaPolarGaussian, random_source::{RandomSource, RandomCore}, bits_random_source::BitRandomSource, positional_random_factory::PositionalRandomFactory, math};
-
+use super::{
+    bits_random_source::BitRandomSource,
+    marsaglia_polar_gaussian::MarsagliaPolarGaussian,
+    math,
+    positional_random_factory::PositionalRandomFactory,
+    random_source::{RandomCore, RandomSource},
+};
 
 pub struct LegacyRandomSource {
     legacy_random_core: LegacyRandomCore,
@@ -58,7 +63,8 @@ impl RandomSource for LegacyRandomSource {
     }
 
     fn next_gaussian(&mut self) -> f64 {
-        self.gaussian_source.next_gaussian(&mut self.legacy_random_core)
+        self.gaussian_source
+            .next_gaussian(&mut self.legacy_random_core)
     }
 }
 
@@ -67,7 +73,6 @@ impl BitRandomSource for LegacyRandomSource {
         self.legacy_random_core.next(bits)
     }
 }
-
 
 struct LegacyRandomCore {
     seed: AtomicI64,
@@ -78,7 +83,8 @@ impl LegacyRandomCore {
     const DOUBLE_MULTIPLIER: f64 = 1.110223E-16;
 
     fn set_seed(&mut self, seed: i64) {
-        self.seed.store((seed ^ 25214903917) & 281474976710655, Ordering::SeqCst);
+        self.seed
+            .store((seed ^ 25214903917) & 281474976710655, Ordering::SeqCst);
     }
 
     fn next(&mut self, bits: i32) -> i32 {
@@ -88,7 +94,9 @@ impl LegacyRandomCore {
         (m >> (48 - bits)) as i32
     }
     fn clone_from_hash_of(&mut self, seed: &str) -> Self {
-        let i = seed.as_bytes().iter().fold(0, |acc: i64, &x| acc.wrapping_mul(31).wrapping_add(x as i64));
+        let i = seed.as_bytes().iter().fold(0, |acc: i64, &x| {
+            acc.wrapping_mul(31).wrapping_add(x as i64)
+        });
         Self {
             seed: AtomicI64::new(i ^ self.next_long()),
         }
@@ -96,8 +104,6 @@ impl LegacyRandomCore {
 }
 
 impl RandomCore for LegacyRandomCore {
-
-
     fn next_int(&mut self) -> i32 {
         self.next(32)
     }
@@ -143,37 +149,39 @@ impl RandomCore for LegacyRandomCore {
     }
 }
 
+#[derive(Clone, Copy, Debug)]
 pub struct LegacyPositionalRandomFactory {
     seed: i64,
 }
 
 impl LegacyPositionalRandomFactory {
     pub fn new(seed: i64) -> Self {
-        Self {
-            seed,
-        }
+        Self { seed }
     }
 }
 
 impl PositionalRandomFactory for LegacyPositionalRandomFactory {
-    fn create_from_hash_of(&self, seed: &str) -> Box<dyn RandomSource> {
-        let i = seed.as_bytes().iter().fold(0, |acc: i64, &x| acc.wrapping_mul(31).wrapping_add(x as i64));
-        Box::new(LegacyRandomSource {
+    type Target = LegacyRandomSource;
+    fn create_from_hash_of(&self, seed: &str) -> Self::Target {
+        let i = seed.as_bytes().iter().fold(0, |acc: i64, &x| {
+            acc.wrapping_mul(31).wrapping_add(x as i64)
+        });
+        LegacyRandomSource {
             legacy_random_core: LegacyRandomCore {
                 seed: AtomicI64::new(i ^ self.seed),
             },
             gaussian_source: MarsagliaPolarGaussian::new(),
-        })
+        }
     }
 
-    fn at(&self, x: i32, y: i32, z: i32) -> Box<dyn RandomSource> {
+    fn at(&self, x: i32, y: i32, z: i32) -> Self::Target {
         let l = math::get_seed(x, y, z);
         let m = l ^ self.seed;
-        Box::new(LegacyRandomSource {
+        LegacyRandomSource {
             legacy_random_core: LegacyRandomCore {
                 seed: AtomicI64::new(m),
             },
             gaussian_source: MarsagliaPolarGaussian::new(),
-        })
+        }
     }
 }

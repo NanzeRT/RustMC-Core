@@ -173,7 +173,7 @@
 
 use super::{marsaglia_polar_gaussian::MarsagliaPolarGaussian, random_source::{RandomCore, RandomSource}, math::get_seed, random_support::seed_from_hash_of, positional_random_factory::PositionalRandomFactory};
 
-struct XoroshiroRandomSource {
+pub struct XoroshiroRandomSource {
     random_number_generator: XoroshiroRandomCore,
     gaussian_source: MarsagliaPolarGaussian,
 }
@@ -313,6 +313,7 @@ impl RandomSource for XoroshiroRandomSource {
     }
 }
 
+#[derive(Clone, Copy, Debug)]
 pub struct XoroshiroPositionalRandomFactory {
     seed_lo: i64,
     seed_hi: i64,
@@ -328,14 +329,15 @@ impl XoroshiroPositionalRandomFactory {
 }
 
 impl PositionalRandomFactory for XoroshiroPositionalRandomFactory {
-    fn at(&self, x: i32, y: i32, z: i32) -> Box<dyn RandomSource> {
+    type Target = XoroshiroRandomSource;
+    fn at(&self, x: i32, y: i32, z: i32) -> Self::Target {
         let l = get_seed(x, y, z);
         let m = l ^ self.seed_lo;
-        Box::new(XoroshiroRandomSource::new((m, self.seed_hi)))
+        XoroshiroRandomSource::new((m, self.seed_hi))
     }
 
-    fn create_from_hash_of(&self, seed: &str) -> Box<dyn RandomSource> {
+    fn create_from_hash_of(&self, seed: &str) -> Self::Target {
         let seed128bit = seed_from_hash_of(seed);
-        Box::new(XoroshiroRandomSource::new((self.seed_lo ^ seed128bit.0, self.seed_hi ^ seed128bit.1)))
+        XoroshiroRandomSource::new((self.seed_lo ^ seed128bit.0, self.seed_hi ^ seed128bit.1))
     }
 }

@@ -1,12 +1,13 @@
-
 // JNIEXPORT jlong JNICALL Java_net_minecraft_world_level_levelgen_LegacyRandomSource_00024LegacyPositionalRandomFactory_nativeNew
 //   (JNIEnv *, jclass, jlong);
 
-use std::rc::Rc;
+use jni::{objects::JClass, sys::jlong, JNIEnv};
 
-use jni::{JNIEnv, objects::JClass, sys::jlong};
-
-use super::{legacy_random_source::LegacyPositionalRandomFactory, xoroshiro_random_source::XoroshiroPositionalRandomFactory, positional_random_factory::PositionalRandomFactory};
+use super::{
+    legacy_random_source::LegacyPositionalRandomFactory,
+    positional_random_factory::PositionalRandomFactoryVariants,
+    xoroshiro_random_source::XoroshiroPositionalRandomFactory,
+};
 
 #[no_mangle]
 pub extern "system" fn Java_net_minecraft_world_level_levelgen_LegacyRandomSource_00024LegacyPositionalRandomFactory_nativeNew(
@@ -14,7 +15,9 @@ pub extern "system" fn Java_net_minecraft_world_level_levelgen_LegacyRandomSourc
     _class: JClass,
     seed: jlong,
 ) -> jlong {
-    Box::into_raw(Box::new(Rc::new(LegacyPositionalRandomFactory::new(seed)) as Rc<dyn PositionalRandomFactory>)) as jlong
+    Box::into_raw(Box::new(PositionalRandomFactoryVariants::Legacy(
+        LegacyPositionalRandomFactory::new(seed),
+    ))) as jlong
 }
 
 // JNIEXPORT void JNICALL Java_net_minecraft_world_level_levelgen_LegacyRandomSource_00024LegacyPositionalRandomFactory_nativeDelete
@@ -26,7 +29,7 @@ pub extern "system" fn Java_net_minecraft_world_level_levelgen_LegacyRandomSourc
     _class: JClass,
     ptr: jlong,
 ) {
-    unsafe { drop(Box::from_raw(ptr as *mut Rc<dyn PositionalRandomFactory>)) }
+    unsafe { drop(Box::from_raw(ptr as *mut PositionalRandomFactoryVariants)) }
 }
 
 // JNIEXPORT jlong JNICALL Java_net_minecraft_world_level_levelgen_XoroshiroRandomSource_00024XoroshiroPositionalRandomFactory_nativeNew
@@ -39,7 +42,9 @@ pub extern "system" fn Java_net_minecraft_world_level_levelgen_XoroshiroRandomSo
     seed0: jlong,
     seed1: jlong,
 ) -> jlong {
-    Box::into_raw(Box::new(Rc::new(XoroshiroPositionalRandomFactory::new((seed0, seed1))) as Rc<dyn PositionalRandomFactory>)) as jlong
+    Box::into_raw(Box::new(PositionalRandomFactoryVariants::Xoroshiro(
+        XoroshiroPositionalRandomFactory::new((seed0, seed1)),
+    ))) as jlong
 }
 
 // JNIEXPORT void JNICALL Java_net_minecraft_world_level_levelgen_XoroshiroRandomSource_00024XoroshiroPositionalRandomFactory_nativeDelete
@@ -51,5 +56,5 @@ pub extern "system" fn Java_net_minecraft_world_level_levelgen_XoroshiroRandomSo
     _class: JClass,
     ptr: jlong,
 ) {
-    unsafe { drop(Box::from_raw(ptr as *mut Rc<dyn PositionalRandomFactory>)) }
+    unsafe { drop(Box::from_raw(ptr as *mut PositionalRandomFactoryVariants)) }
 }
